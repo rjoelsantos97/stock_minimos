@@ -27,7 +27,7 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
                 filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
                 if not filtrados.empty:
                     filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
-                    resultado_folha = filtrados[['Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
+                    resultado_folha = filtrados[['Armazém','Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                     resultados.append(resultado_folha)
         else:
             if not dados.empty:
