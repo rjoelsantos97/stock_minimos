@@ -27,10 +27,10 @@ def processar_arquivo(arquivo_excel):
         return pd.DataFrame()
 
 # Streamlit app layout
-st.title('Análise de Stock Minimo')
+st.title('Análise Stock Minimo')
 
 # Upload do arquivo
-uploaded_file = st.file_uploader("Carregue o arquivo Excel aqui:", type=['xlsx'])
+uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'])
 
 if uploaded_file is not None:
     # Processa o arquivo carregado
@@ -47,6 +47,6 @@ if uploaded_file is not None:
         towrite.seek(0)  # Volta ao início do stream
 
         # Link para download do resultado
-        st.download_button(label="Baixar arquivo Excel processado", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
+        st.download_button(label="Download ficheiro dos minimos", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
     else:
         st.write("Nenhum resultado encontrado para mostrar.")
