@@ -54,7 +54,6 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
     todas_refs = pd.concat(todas_refs)
     refs_abc_a = todas_refs.groupby('Ref').filter(lambda x: all(x['ABC'] == 'A'))
 
-    # Processa cada folha considerando apenas as refs com ABC = 'A' em todos os armazéns
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         dados = dados[dados['Ref'].isin(refs_abc_a['Ref'])]
@@ -62,12 +61,17 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
             dados_filtrados = dados[dados['Stock_Min'] > 0]
             if not dados_filtrados.empty:
                 dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
-                filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
-                if not filtrados.empty:
-                    filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
-                    resultado_folha['Armazém'] = folha.split()[-1]
-                    resultado_folha = filtrados[['Armazém','Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
-                    resultados.append(resultado_folha)
+                dados_filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
+                dados_filtrados['Armazém'] = folha.split()[-1]
+                resultado_folha = dados_filtrados[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
+                resultados.append(resultado_folha)
+        else:
+            if not dados.empty:
+                dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
+                dados['Armazém'] = folha.split()[-1]
+                dados['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
+                resultado_folha = dados[['Armazém', 'Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
+                resultados.append(resultado_folha)
         else:
             if not dados.empty:
                 dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
