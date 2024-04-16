@@ -73,3 +73,7 @@ if st.button('Executar Análise'):
                 st.error("Nenhum resultado encontrado para mostrar.")
     else:
         st.error("Por favor, carregue um ficheiro para análise.")
+
+# Footer
+footer_html = "<div style='background-color: #f1f1f1; color: #707070; font-size: 16px; padding: 10px; text-align: center; border-top: 1px solid #e0e0e0;'>Desenvolvido por NAPS Parts & Solutions</div>"
+st.markdown(footer_html, unsafe_allow_html=True)
