@@ -6,14 +6,12 @@ import io
 def processar_arquivo(arquivo_excel, folhas_selecionadas):
     resultados = []
     todas_refs = []
-    total_pendentes = 0  # Inicializa a soma dos pendentes
 
     # Lê e processa cada folha selecionada para coletar todas as referências e seus ABCs
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         todas_refs.append(dados[['Ref', 'ABC']])
-        total_pendentes += dados['Pendentes'].sum()  # Soma os valores da coluna Pendentes
-
+        
     # Concatena todas as referências para verificar a condição ABC = 'A'
     todas_refs = pd.concat(todas_refs)
     refs_abc_a = todas_refs.groupby('Ref').filter(lambda x: all(x['ABC'] == 'A'))
@@ -28,21 +26,18 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
                 dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
                 filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
                 if not filtrados.empty:
-                    resultado_folha = filtrados[['Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto']]
-                    resultado_folha['Armazém'] = folha.split()[-1]
-                    resultado_folha = resultado_folha[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto']]
+                    filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
+                    resultado_folha = filtrados[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                     resultados.append(resultado_folha)
         else:
             if not dados.empty:
-                resultado_folha = dados[['Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto']]
-                resultado_folha['Armazém'] = folha.split()[-1]
+                dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
+                resultado_folha = dados[['Armazém', 'Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                 resultado_folha['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
-                resultado_folha = resultado_folha[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto']]
                 resultados.append(resultado_folha)
 
     if resultados:
         resultado_final = pd.concat(resultados)
-        resultado_final['Total Pendentes'] = total_pendentes  # Adiciona a soma dos pendentes a cada linha
         return resultado_final
     else:
         return pd.DataFrame()
@@ -63,9 +58,7 @@ uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'
 if st.button('Executar Análise'):
     if uploaded_file is not None and folhas_selecionadas:
         with st.spinner('A executar análise, por favor aguarde. Pode demorar alguns minutos...'):
-            # Processa o arquivo carregado com as folhas selecionadas
             df_resultado = processar_arquivo(uploaded_file, folhas_selecionadas)
-            
             if not df_resultado.empty:
                 # Mostra o DataFrame resultante
                 st.success('Análise concluída!')
