@@ -9,8 +9,8 @@ import smtplib
 
 #Config email SMTP
 def send_email(receiver_email, file_stream):
-    sender_email = "arsruben.santos@gmail.com"  # Substitua pelo seu e-mail
-    sender_password = "vkow iimx ldxv flhx"  # Substitua pela sua senha
+    sender_email = "napsparts@sapo.pt"  # Substitua pelo seu e-mail
+    sender_password = "Naps2022#?"  # Substitua pela sua senha
 
     message = MIMEMultipart()
     message["From"] = sender_email
@@ -29,7 +29,7 @@ def send_email(receiver_email, file_stream):
 
     # Conectando ao servidor e enviando o e-mail
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)  # Use seu servidor SMTP
+        server = smtplib.SMTP('smtp.sapo.pt', 587)  # Use seu servidor SMTP
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, receiver_email, message.as_string())
