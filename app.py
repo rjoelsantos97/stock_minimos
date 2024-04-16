@@ -8,7 +8,7 @@ def processar_arquivo(arquivo_excel):
     resultados = []
     todas_refs = []
 
-    # Lê e processa cada folha para coletar todas as referências
+    # Lê e processa cada folha para coletar todas as referências e seus ABCs
     for folha in folhas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         todas_refs.append(dados[['Ref', 'ABC']])
@@ -21,13 +21,21 @@ def processar_arquivo(arquivo_excel):
     for folha in folhas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         dados = dados[dados['Ref'].isin(refs_abc_a['Ref'])]
-        dados_filtrados = dados[dados['Stock_Min'] > 0]
-        if not dados_filtrados.empty:
-            dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
-            filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
-            if not filtrados.empty:
-                resultado_folha = filtrados[['Ref', 'Quantidade abaixo stock minimo', 'ABC']]
+        if folha == "Stock Feira":
+            dados_filtrados = dados[dados['Stock_Min'] > 0]
+            if not dados_filtrados.empty:
+                dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
+                filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
+                if not filtrados.empty:
+                    resultado_folha = filtrados[['Ref', 'Quantidade abaixo stock minimo', 'ABC']]
+                    resultado_folha['Armazém'] = folha.split()[-1]
+                    resultado_folha = resultado_folha[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC']]
+                    resultados.append(resultado_folha)
+        else:
+            if not dados.empty:
+                resultado_folha = dados[['Ref', 'ABC']]
                 resultado_folha['Armazém'] = folha.split()[-1]
+                resultado_folha['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
                 resultado_folha = resultado_folha[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC']]
                 resultados.append(resultado_folha)
     
@@ -37,15 +45,15 @@ def processar_arquivo(arquivo_excel):
         return pd.DataFrame()
 
 # Streamlit app layout
-st.title('Análise de Stock Mínimo')
+st.title("Análise de Stock Mínimo - Super A's")
 
 # Upload do arquivo
-uploaded_file = st.file_uploader("Carregue o arquivo Excel aqui:", type=['xlsx'])
+uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'])
 
 # Botão para executar a análise
 if st.button('Executar Análise'):
     if uploaded_file is not None:
-        with st.spinner('A executar a análise, por favor aguarde. Pode demorar uns minutos...'):
+        with st.spinner('A executar análise, por favor aguarde. Pode demorar alguns minutos...'):
             # Processa o arquivo carregado
             df_resultado = processar_arquivo(uploaded_file)
             
@@ -60,7 +68,7 @@ if st.button('Executar Análise'):
                 towrite.seek(0)  # Volta ao início do stream
 
                 # Link para download do resultado
-                st.download_button(label="Download Ficheiro processado", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
+                st.download_button(label="Download ficheiro Excel processado", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
             else:
                 st.error("Nenhum resultado encontrado para mostrar.")
     else:
