@@ -1,6 +1,44 @@
 import streamlit as st
 import pandas as pd
 import io
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+import smtplib
+
+
+#Config email SMTP
+def send_email(receiver_email, file_stream):
+    sender_email = "your_email@example.com"  # Substitua pelo seu e-mail
+    sender_password = "your_password"  # Substitua pela sua senha
+
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = "Análise de Stock Mínimo"
+
+    # Corpo da mensagem
+    body = "Encontre em anexo a análise de stock mínimo."
+    message.attach(MIMEText(body, "plain"))
+
+    # Anexando o arquivo Excel
+    file_stream.seek(0)
+    part = MIMEApplication(file_stream.read(), Name='resultado_stock_minimo.xlsx')
+    part['Content-Disposition'] = 'attachment; filename="resultado_stock_minimo.xlsx"'
+    message.attach(part)
+
+    # Conectando ao servidor e enviando o e-mail
+    try:
+        server = smtplib.SMTP('smtp.example.com', 587)  # Use seu servidor SMTP
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, receiver_email, message.as_string())
+        server.quit()
+        return "E-mail enviado com sucesso!"
+    except Exception as e:
+        return str(e)
+
+
 
 # Função para processar o arquivo Excel com armazéns selecionados
 def processar_arquivo(arquivo_excel, folhas_selecionadas):
@@ -27,11 +65,13 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
                 filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
                 if not filtrados.empty:
                     filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
+                    resultado_folha['Armazém'] = folha.split()[-1]
                     resultado_folha = filtrados[['Armazém','Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                     resultados.append(resultado_folha)
         else:
             if not dados.empty:
                 dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
+                resultado_folha['Armazém'] = folha.split()[-1]
                 resultado_folha = dados[['Armazém', 'Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                 resultado_folha['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
                 resultados.append(resultado_folha)
@@ -71,6 +111,14 @@ if st.button('Executar Análise'):
 
                 # Link para download do resultado
                 st.download_button(label="Baixar arquivo Excel processado", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
+                # Campo para inserir o e-mail do destinatário
+                receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
+                if st.button("Enviar Análise por E-mail"):
+                    if receiver_email:
+                        send_result = send_email(receiver_email, towrite)
+                        st.success(send_result)
+                    else:
+                        st.error("Por favor, insira um endereço de e-mail válido.")
             else:
                 st.error("Nenhum resultado encontrado para mostrar.")
     else:
