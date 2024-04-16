@@ -5,40 +5,38 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import smtplib
+import traceback
 
-
-#Config email SMTP
+# Config email SMTP
 def send_email(receiver_email, file_stream):
-    sender_email = "napsparts@sapo.pt"  # Substitua pelo seu e-mail
-    sender_password = "Naps2022#?"  # Substitua pela sua senha
+    sender_email = "napsparts@sapo.pt"  # Your email
+    sender_password = "Naps2022#?"  # Your password
 
     message = MIMEMultipart()
     message["From"] = sender_email
     message["To"] = receiver_email
     message["Subject"] = "Análise de Stock Mínimo"
 
-    # Corpo da mensagem
+    # Body of the message
     body = "Encontre em anexo a análise de stock mínimo."
     message.attach(MIMEText(body, "plain"))
 
-    # Anexando o arquivo Excel
+    # Attaching the Excel file
     file_stream.seek(0)
     part = MIMEApplication(file_stream.read(), Name='resultado_stock_minimo.xlsx')
     part['Content-Disposition'] = 'attachment; filename="resultado_stock_minimo.xlsx"'
     message.attach(part)
 
-    # Conectando ao servidor e enviando o e-mail
+    # Connecting to the server and sending the email
     try:
-        server = smtplib.SMTP('smtp.sapo.pt', 587)  # Use seu servidor SMTP
+        server = smtplib.SMTP('smtp.sapo.pt', 587)  # SMTP server
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, receiver_email, message.as_string())
         server.quit()
         return "E-mail enviado com sucesso!"
     except Exception as e:
-        return str(e)
-
-
+        return f"Failed to send email: {e}\n{traceback.format_exc()}"
 
 # Função para processar o arquivo Excel com armazéns selecionados
 def processar_arquivo(arquivo_excel, folhas_selecionadas):
@@ -92,24 +90,22 @@ folhas_selecionadas = st.multiselect("Selecione os armazéns para análise:", op
 # Upload do arquivo
 uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'])
 
-# Botão para executar a análise
+# Execute analysis
 if st.button('Executar Análise'):
-    if uploaded_file is not None and folhas_selecionadas:
+    if uploaded_file and folhas_selecionadas:
         with st.spinner('A executar análise, por favor aguarde. Pode demorar alguns minutos...'):
             df_resultado = processar_arquivo(uploaded_file, folhas_selecionadas)
             if not df_resultado.empty:
-                # Mostra o DataFrame resultante
                 st.success('Análise concluída!')
                 st.dataframe(df_resultado)
 
-                # Transforma o DataFrame em um arquivo Excel para download
+                # Prepare file for download and/or email
                 towrite = io.BytesIO()
                 df_resultado.to_excel(towrite, index=False, engine='openpyxl')
-                towrite.seek(0)  # Volta ao início do stream
-
-                # Link para download do resultado
-                st.download_button(label="Baixar arquivo Excel processado", data=towrite, file_name='resultado_stock_minimo.xlsx', mime="application/vnd.ms-excel")
-                # Campo para inserir o e-mail do destinatário
+                towrite.seek(0)
+                st.download_button("Baixar arquivo Excel processado", towrite, "resultado_stock_minimo.xlsx", "application/vnd.ms-excel")
+                
+                # Email input and send functionality
                 receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
                 if st.button("Enviar Análise por E-mail"):
                     if receiver_email:
