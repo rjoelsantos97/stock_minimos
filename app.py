@@ -63,7 +63,7 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
                 dados['Quantidade abaixo stock minimo'] = dados['Stock_Min'] - dados['Stock_Atual']
                 dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
                 dados['Armazém'] = folha.split()[-1]
-                dados = dados[dados['Quantidade abaixo stock minimo'] <= 0]  # Filtro para quantidades críticas
+                #dados = dados[dados['Quantidade abaixo stock minimo'] <= 0]  # Filtro para quantidades críticas
                 if not dados.empty:
                     resultado_folha = dados[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                     resultados.append(resultado_folha)
