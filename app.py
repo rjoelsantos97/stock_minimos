@@ -7,52 +7,49 @@ from email.mime.application import MIMEApplication
 import smtplib
 import traceback
 
-# Config email SMTP
+# Configurações de email SMTP
 def send_email(receiver_email, file_stream):
-    sender_email = "napsparts@sapo.pt"  # Your email
-    sender_password = "Naps2022#?"  # Your password
+    sender_email = "napsparts@sapo.pt"  # Seu email
+    sender_password = "Naps2022#?"  # Sua senha
 
     message = MIMEMultipart()
     message["From"] = sender_email
     message["To"] = receiver_email
     message["Subject"] = "Análise de Stock Mínimo"
 
-    # Body of the message
+    # Corpo da mensagem
     body = "Encontre em anexo a análise de stock mínimo."
     message.attach(MIMEText(body, "plain"))
 
-    # Attaching the Excel file
+    # Anexando o arquivo Excel
     file_stream.seek(0)
     part = MIMEApplication(file_stream.read(), Name='resultado_stock_minimo.xlsx')
     part['Content-Disposition'] = 'attachment; filename="resultado_stock_minimo.xlsx"'
     message.attach(part)
 
-    # Connecting to the server and sending the email
+    # Conectando ao servidor e enviando o email
     try:
-        server = smtplib.SMTP('smtp.sapo.pt', 587)  # SMTP server
+        server = smtplib.SMTP('smtp.sapo.pt', 587)  # Servidor SMTP
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, receiver_email, message.as_string())
         server.quit()
         return "E-mail enviado com sucesso!"
     except Exception as e:
-        return f"Failed to send email: {e}\n{traceback.format_exc()}"
+        return f"Erro ao enviar email: {e}\n{traceback.format_exc()}"
 
 # Função para processar o arquivo Excel com armazéns selecionados
 def processar_arquivo(arquivo_excel, folhas_selecionadas):
     resultados = []
     todas_refs = []
 
-    # Lê e processa cada folha selecionada para coletar todas as referências e seus ABCs
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         todas_refs.append(dados[['Ref', 'ABC']])
         
-    # Concatena todas as referências para verificar a condição ABC = 'A'
     todas_refs = pd.concat(todas_refs)
     refs_abc_a = todas_refs.groupby('Ref').filter(lambda x: all(x['ABC'] == 'A'))
 
-    # Processa cada folha considerando apenas as refs com ABC = 'A' em todos os armazéns
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         dados = dados[dados['Ref'].isin(refs_abc_a['Ref'])]
@@ -68,53 +65,34 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
             if not dados.empty:
                 dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
                 dados['Armazém'] = folha.split()[-1]
-                dados['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
+                dados['Quantidade abaixo stock minimo'] = 'N/A'
                 resultado_folha = dados[['Armazém', 'Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                 resultados.append(resultado_folha)
 
-    if resultados:
-        resultado_final = pd.concat(resultados)
-        return resultado_final
-    else:
-        return pd.DataFrame()
+    return pd.concat(resultados) if resultados else pd.DataFrame()
 
-# Streamlit app layout
+# Layout do app Streamlit
 st.title("Análise de Stock Mínimo - Super A's ")
 
-# Lista de folhas disponíveis para seleção
 opcoes_folhas = ["Stock Feira", "Stock Frielas", "Stock Coimbra", "Stock Lousada", "Stock Sintra", "Stock Albergaria", "Stock Braga", "Stock Porto", "Stock Seixal"]
 folhas_selecionadas = st.multiselect("Selecione os armazéns para análise:", opcoes_folhas, default=opcoes_folhas)
 
-# Upload do arquivo e armazenamento em sessão
 uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'])
 if uploaded_file:
-    st.session_state['uploaded_file'] = uploaded_file
+    st.session_state.uploaded_file = uploaded_file
 
-# Execute analysis
-if st.button('Executar Análise'):
-    if 'uploaded_file' in st.session_state and folhas_selecionadas:
-        with st.spinner('A executar análise, por favor aguarde. Pode demorar alguns minutos...'):
-            df_resultado = processar_arquivo(st.session_state['uploaded_file'], folhas_selecionadas)
-            if not df_resultado.empty:
-                st.success('Análise concluída!')
-                st.dataframe(df_resultado)
+if st.button('Executar Análise') and 'uploaded_file' in st.session_state and folhas_selecionadas:
+    df_resultado = processar_arquivo(st.session_state.uploaded_file, folhas_selecionadas)
+    if not df_resultado.empty:
+        st.success('Análise concluída!')
+        st.dataframe(df_resultado)
+        towrite = io.BytesIO()
+        df_resultado.to_excel(towrite, index=False, engine='openpyxl')
+        towrite.seek(0)
+        st.session_state.towrite = towrite  # Salvar towrite em session_state
+        st.download_button("Baixar arquivo Excel processado", towrite, "resultado_stock_minimo.xlsx", "application/vnd.ms-excel")
 
-                # Prepare file for download and/or email
-                towrite = io.BytesIO()
-                df_resultado.to_excel(towrite, index=False, engine='openpyxl')
-                towrite.seek(0)
-                st.session_state['towrite'] = towrite  # Saving towrite in session_state
-                st.download_button("Baixar arquivo Excel processado", towrite, "resultado_stock_minimo.xlsx", "application/vnd.ms-excel")
-                
-                # Email functionality
-                receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
-                if st.button("Enviar Análise por E-mail"):
-                    if receiver_email:
-                        send_result = send_email(receiver_email, st.session_state['towrite'])
-                        st.success(send_result)
-                    else:
-                        st.error("Por favor, insira um endereço de e-mail válido.")
-            else:
-                st.error("Nenhum resultado encontrado para mostrar.")
-    else:
-        st.error("Por favor, carregue um arquivo e selecione pelo menos um armazém para análise.")
+receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
+if st.button("Enviar Análise por E-mail") and 'towrite' in st.session_state and receiver_email:
+    send_result = send_email(receiver_email, st.session_state.towrite)
+    st.success(send_result)
