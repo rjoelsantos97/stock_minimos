@@ -43,6 +43,7 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
     resultados = []
     todas_refs = []
 
+    # Carregar todos os dados e filtrar referências com ABC = 'A'
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         todas_refs.append(dados[['Ref', 'ABC']])
@@ -50,22 +51,24 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
     todas_refs = pd.concat(todas_refs)
     refs_abc_a = todas_refs.groupby('Ref').filter(lambda x: all(x['ABC'] == 'A'))
 
+    # Processar cada folha selecionada
     for folha in folhas_selecionadas:
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         dados = dados[dados['Ref'].isin(refs_abc_a['Ref'])]
+
+        # Aplicar condições adicionais apenas para a folha "Stock Feira"
         if folha == "Stock Feira":
-            # Aplicando as novas condições
-            dados_filtrados = dados[(dados['Stock_Min'] > 0) & (dados['SemReposicao'] == False) & (dados['Stock_Atual'] == 0)]
-            if not dados_filtrados.empty:
-                dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
-                dados_filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
-                dados_filtrados['Armazém'] = folha.split()[-1]
-                # Filtro para incluir apenas linhas onde a quantidade abaixo do stock mínimo é menor ou igual a 0
-                dados_filtrados = dados_filtrados[dados_filtrados['Quantidade abaixo stock minimo'] <= 0]
-                if not dados_filtrados.empty:
-                    resultado_folha = dados_filtrados[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
+            dados = dados[(dados['Stock_Min'] > 0) & (dados['SemReposicao'] == False) & (dados['Stock_Atual'] == 0)]
+            if not dados.empty:
+                dados['Quantidade abaixo stock minimo'] = dados['Stock_Min'] - dados['Stock_Atual']
+                dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
+                dados['Armazém'] = folha.split()[-1]
+                dados = dados[dados['Quantidade abaixo stock minimo'] <= 0]  # Filtro para quantidades críticas
+                if not dados.empty:
+                    resultado_folha = dados[['Armazém', 'Ref', 'Quantidade abaixo stock minimo', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
                     resultados.append(resultado_folha)
         else:
+            # Processar outras folhas sem a condição de 'Stock_Atual' e 'SemReposicao'
             if not dados.empty:
                 dados['Total Pendentes'] = dados.groupby('Ref')['Pendentes'].transform('sum')
                 dados['Armazém'] = folha.split()[-1]
