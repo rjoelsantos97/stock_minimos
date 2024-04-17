@@ -78,23 +78,23 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
     else:
         return pd.DataFrame()
 
-# Lista de folhas disponíveis para seleção
-opcoes_folhas = ["Stock Feira", "Stock Frielas", "Stock Coimbra", "Stock Lousada", "Stock Sintra", "Stock Albergaria", "Stock Braga", "Stock Porto", "Stock Seixal"]
-
 # Streamlit app layout
 st.title("Análise de Stock Mínimo - Super A's ")
 
-# Permitir ao usuário selecionar folhas
+# Lista de folhas disponíveis para seleção
+opcoes_folhas = ["Stock Feira", "Stock Frielas", "Stock Coimbra", "Stock Lousada", "Stock Sintra", "Stock Albergaria", "Stock Braga", "Stock Porto", "Stock Seixal"]
 folhas_selecionadas = st.multiselect("Selecione os armazéns para análise:", opcoes_folhas, default=opcoes_folhas)
 
-# Upload do arquivo
+# Upload do arquivo e armazenamento em sessão
 uploaded_file = st.file_uploader("Carregue o ficheiro Excel aqui:", type=['xlsx'])
+if uploaded_file:
+    st.session_state['uploaded_file'] = uploaded_file
 
 # Execute analysis
 if st.button('Executar Análise'):
-    if uploaded_file and folhas_selecionadas:
+    if 'uploaded_file' in st.session_state and folhas_selecionadas:
         with st.spinner('A executar análise, por favor aguarde. Pode demorar alguns minutos...'):
-            df_resultado = processar_arquivo(uploaded_file, folhas_selecionadas)
+            df_resultado = processar_arquivo(st.session_state['uploaded_file'], folhas_selecionadas)
             if not df_resultado.empty:
                 st.success('Análise concluída!')
                 st.dataframe(df_resultado)
@@ -103,13 +103,14 @@ if st.button('Executar Análise'):
                 towrite = io.BytesIO()
                 df_resultado.to_excel(towrite, index=False, engine='openpyxl')
                 towrite.seek(0)
+                st.session_state['towrite'] = towrite  # Saving towrite in session_state
                 st.download_button("Baixar arquivo Excel processado", towrite, "resultado_stock_minimo.xlsx", "application/vnd.ms-excel")
                 
-                # Email input and send functionality
+                # Email functionality
                 receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
                 if st.button("Enviar Análise por E-mail"):
                     if receiver_email:
-                        send_result = send_email(receiver_email, towrite)
+                        send_result = send_email(receiver_email, st.session_state['towrite'])
                         st.success(send_result)
                     else:
                         st.error("Por favor, insira um endereço de e-mail válido.")
@@ -117,7 +118,3 @@ if st.button('Executar Análise'):
                 st.error("Nenhum resultado encontrado para mostrar.")
     else:
         st.error("Por favor, carregue um arquivo e selecione pelo menos um armazém para análise.")
-
-# Footer
-footer_html = "<div style='background-color: #f1f1f1; color: #707070; font-size: 16px; padding: 10px; text-align: center; border-top: 1px solid #e0e0e0;'>Desenvolvido por NAPS Parts & Solutions</div>"
-st.markdown(footer_html, unsafe_allow_html=True)
