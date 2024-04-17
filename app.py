@@ -94,5 +94,6 @@ if st.button('Executar Análise') and 'uploaded_file' in st.session_state and fo
 
 receiver_email = st.text_input("Digite o e-mail para enviar a análise:")
 if st.button("Enviar Análise por E-mail") and 'towrite' in st.session_state and receiver_email:
-    send_result = send_email(receiver_email, st.session_state.towrite)
+    with st.spinner('Enviando e-mail, por favor aguarde...'):
+        send_result = send_email(receiver_email, st.session_state.towrite)
     st.success(send_result)
