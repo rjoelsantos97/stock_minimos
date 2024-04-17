@@ -54,7 +54,8 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
         dados = pd.read_excel(arquivo_excel, sheet_name=folha)
         dados = dados[dados['Ref'].isin(refs_abc_a['Ref'])]
         if folha == "Stock Feira":
-            dados_filtrados = dados[dados['Stock_Min'] > 0]
+            # Aplicando as novas condições
+            dados_filtrados = dados[(dados['Stock_Min'] > 0) & (dados['SemReposicao'] == False) & (dados['Stock_Atual'] == 0)]
             if not dados_filtrados.empty:
                 dados_filtrados['Quantidade abaixo stock minimo'] = dados_filtrados['Stock_Min'] - dados_filtrados['Stock_Atual']
                 dados_filtrados['Total Pendentes'] = dados_filtrados.groupby('Ref')['Pendentes'].transform('sum')
