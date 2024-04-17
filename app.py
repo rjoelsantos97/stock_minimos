@@ -74,7 +74,7 @@ def processar_arquivo(arquivo_excel, folhas_selecionadas):
                 dados['Armazém'] = folha.split()[-1]
                 dados['Quantidade abaixo stock minimo'] = 'N/A'  # Para folhas que não são 'Stock Feira'
                 resultado_folha = dados[['Armazém', 'Ref', 'ABC', 'Marca', 'Familia', 'LinhaProduto', 'Total Pendentes']]
-                resultados.append(resultado_folha)
+                #resultados.append(resultado_folha)
     
     return pd.concat(resultados) if resultados else pd.DataFrame()
 
